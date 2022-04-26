@@ -75,12 +75,14 @@ describe.only('NFTAuction', () => {
     );
   });
 
-  it.only('should transfer the token if bid met exactly the price', async () => {
+  it('should transfer the token if bid met exactly the price', async () => {
     const initialBalanceSeller1 = await seller1.getBalance();
 
     // make a bid
     const bid = ethers.utils.parseEther('0.1');
-    await contract.connect(buyer1).makeABid(1, { value: bid });
+    await expect(contract.connect(buyer1).makeABid(1, { value: bid }))
+      .to.emit(contract, 'TokenItemSold')
+      .withArgs(1, seller1.address, buyer1.address, bid);
 
     // check that the token is now sold and belongs to the buyer
     const token = await contract.getToken(1);

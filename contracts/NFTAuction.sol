@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "hardhat/console.sol";
+
 contract NFTAuction is ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
@@ -25,7 +27,8 @@ contract NFTAuction is ERC721URIStorage, Ownable {
         bool sold;
     }
 
-    event TokenItemCreated(uint256 indexed tokenId, address seller, address owner, uint256 price, bool sold);
+    event TokenItemCreated(uint256 indexed tokenId, address seller, address owner, uint256 price);
+    event TokenItemSold(uint256 indexed tokenId, address seller, address buyer, uint256 price);
 
     constructor() ERC721("NFTAuction", "NFTA") {}
 
@@ -59,7 +62,7 @@ contract NFTAuction is ERC721URIStorage, Ownable {
         require(price > 0, "Price must be greater than 0");
         TokenItem memory item = TokenItem(tokenId, payable(msg.sender), payable(address(this)), price, false);
         items[tokenId] = item;
-        emit TokenItemCreated(tokenId, msg.sender, msg.sender, price, false);
+        emit TokenItemCreated(tokenId, msg.sender, msg.sender, price);
     }
 
     // returns all unsold market items
@@ -108,5 +111,7 @@ contract NFTAuction is ERC721URIStorage, Ownable {
         uint256 fee = bid / 10;
         ownerEarnings += fee;
         payable(seller).transfer(bid - fee);
+
+        emit TokenItemSold(tokenId, seller, buyer, bid);
     }
 }
