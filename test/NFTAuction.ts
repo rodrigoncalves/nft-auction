@@ -117,5 +117,8 @@ describe.only('NFTAuction', () => {
     expect(diff2).to.lt(ethers.utils.parseEther('0.01'));
     expect(diff2).to.gt(ethers.utils.parseEther('0.009'));
     expect(await contract.connect(contractOwner).getEarnings()).to.eq(0);
+
+    // check that the token has already been sold
+    await expect(contract.makeABid(1, { value: bid })).to.be.revertedWith('Token has already been sold');
   });
 });

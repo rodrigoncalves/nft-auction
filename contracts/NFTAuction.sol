@@ -90,14 +90,13 @@ contract NFTAuction is ERC721URIStorage, Ownable {
     }
 
     function makeABid(uint256 tokenId) public payable {
+        require(items[tokenId].sold == false, "Token has already been sold");
         require(highestBid[tokenId] < msg.value, "Bid must be higher than current highest bid");
-        require(items[tokenId].sold == false, "Item has already been sold");
         require(items[tokenId].price >= msg.value, "Bid must be less than or equal to the price");
 
         highestBid[tokenId] = msg.value;
         highestBidder[tokenId] = msg.sender;
 
-        // transfer the token
         if (items[tokenId].price == msg.value) {
             transferToken(tokenId, msg.value);
         }
