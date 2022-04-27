@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "hardhat/console.sol";
 
 contract NFTAuction is ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
@@ -17,6 +17,8 @@ contract NFTAuction is ERC721URIStorage, Ownable {
     mapping(uint256 => uint256) private highestBid;
     mapping(uint256 => address) private highestBidder;
     mapping(address => uint256) private earnings;
+
+    IERC20 private token;
 
     struct TokenItem {
         uint256 tokenId;
@@ -29,7 +31,9 @@ contract NFTAuction is ERC721URIStorage, Ownable {
     event TokenItemCreated(uint256 indexed tokenId, address seller, address owner, uint256 price);
     event TokenItemSold(uint256 indexed tokenId, address seller, address buyer, uint256 price);
 
-    constructor() ERC721("NFTAuction", "NFTA") {}
+    constructor(IERC20 _token) ERC721("NFTAuction", "NFTA") {
+        token = _token;
+    }
 
     function getToken(uint256 tokenId) public view returns (TokenItem memory item) {
         return items[tokenId];
@@ -50,7 +54,7 @@ contract NFTAuction is ERC721URIStorage, Ownable {
     function withdrawEarnings() public payable {
         require(earnings[msg.sender] > 0, "No earnings to withdraw");
 
-        payable(msg.sender).transfer(earnings[msg.sender]);
+        token.transfer(msg.sender, earnings[msg.sender]);
         earnings[msg.sender] = 0;
     }
 
@@ -112,6 +116,7 @@ contract NFTAuction is ERC721URIStorage, Ownable {
         _itemsSold.increment();
 
         _transfer(address(this), buyer, tokenId);
+        token.transferFrom(buyer, address(this), bid);
 
         uint256 fee = bid / 10;
         earnings[owner()] += fee;
