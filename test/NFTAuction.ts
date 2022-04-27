@@ -76,8 +76,6 @@ describe.only('NFTAuction', () => {
   });
 
   it('should transfer the token if bid met exactly the price', async () => {
-    const initialBalanceSeller1 = await seller1.getBalance();
-
     // make a bid
     const bid = ethers.utils.parseEther('0.1');
     await expect(contract.connect(buyer1).makeABid(1, { value: bid }))
@@ -88,20 +86,36 @@ describe.only('NFTAuction', () => {
     const token = await contract.getToken(1);
     expect(token.sold).to.be.true;
     expect(token.owner).to.eq(buyer1.address);
+    expect(await contract.ownerOf(1)).to.eq(buyer1.address);
 
     // check that the item is not available anymore for sale
     const availableItems = await contract.getAvailableItems();
     expect(availableItems.length).to.eq(1);
+    expect(availableItems[0].tokenId).to.not.eq(1);
 
     // check the owner earnings
-    const ownerEarnings = await contract.connect(contractOwner).getOwnerEarnings();
+    const ownerEarnings = await contract.connect(contractOwner).getEarnings();
     expect(ownerEarnings).to.eq(ethers.utils.parseEther('0.01'));
 
-    // check that the seller received the amount minus contract owner fee
-    const finalBalanceSeller1 = await seller1.getBalance();
-    expect(finalBalanceSeller1.sub(initialBalanceSeller1)).to.eq(ethers.utils.parseEther('0.09'));
+    // check the seller earnings
+    const sellerEarnings = await contract.connect(seller1).getEarnings();
+    expect(sellerEarnings).to.eq(ethers.utils.parseEther('0.09'));
 
-    // non-owner user cannot check the owner earnings
-    await expect(contract.connect(seller1).getOwnerEarnings()).to.be.revertedWith('Ownable: caller is not the owner');
+    // check seller withdrawal earnings
+    const initialBalanceSeller = await seller1.getBalance();
+    await contract.connect(seller1).withdrawEarnings();
+    const finalBalanceSeller = await seller1.getBalance();
+    const diff = finalBalanceSeller.sub(initialBalanceSeller);
+    expect(diff).to.lt(ethers.utils.parseEther('0.090'));
+    expect(diff).to.gt(ethers.utils.parseEther('0.089'));
+    expect(await contract.connect(seller1).getEarnings()).to.eq(0);
+
+    const initialBalanceOwner = await contractOwner.getBalance();
+    await contract.connect(contractOwner).withdrawEarnings();
+    const finalBalanceOwner = await contractOwner.getBalance();
+    const diff2 = finalBalanceOwner.sub(initialBalanceOwner);
+    expect(diff2).to.lt(ethers.utils.parseEther('0.01'));
+    expect(diff2).to.gt(ethers.utils.parseEther('0.009'));
+    expect(await contract.connect(contractOwner).getEarnings()).to.eq(0);
   });
 });

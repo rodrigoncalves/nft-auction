@@ -16,8 +16,7 @@ contract NFTAuction is ERC721URIStorage, Ownable {
     mapping(uint256 => TokenItem) private items;
     mapping(uint256 => uint256) private highestBid;
     mapping(uint256 => address) private highestBidder;
-
-    uint256 private ownerEarnings;
+    mapping(address => uint256) private earnings;
 
     struct TokenItem {
         uint256 tokenId;
@@ -44,8 +43,15 @@ contract NFTAuction is ERC721URIStorage, Ownable {
         return highestBid[tokenId];
     }
 
-    function getOwnerEarnings() public view onlyOwner returns (uint256) {
-        return ownerEarnings;
+    function getEarnings() public view returns (uint256) {
+        return earnings[msg.sender];
+    }
+
+    function withdrawEarnings() public payable {
+        require(earnings[msg.sender] > 0, "No earnings to withdraw");
+
+        payable(msg.sender).transfer(earnings[msg.sender]);
+        earnings[msg.sender] = 0;
     }
 
     function createToken(string memory tokenURI, uint256 price) public payable returns (uint256) {
@@ -93,11 +99,11 @@ contract NFTAuction is ERC721URIStorage, Ownable {
 
         // transfer the token
         if (items[tokenId].price == msg.value) {
-            createSale(tokenId, msg.value);
+            transferToken(tokenId, msg.value);
         }
     }
 
-    function createSale(uint256 tokenId, uint256 bid) private {
+    function transferToken(uint256 tokenId, uint256 bid) private {
         address seller = items[tokenId].seller;
         address buyer = address(msg.sender);
 
@@ -109,8 +115,8 @@ contract NFTAuction is ERC721URIStorage, Ownable {
         _transfer(address(this), buyer, tokenId);
 
         uint256 fee = bid / 10;
-        ownerEarnings += fee;
-        payable(seller).transfer(bid - fee);
+        earnings[owner()] += fee;
+        earnings[seller] += bid - fee;
 
         emit TokenItemSold(tokenId, seller, buyer, bid);
     }
