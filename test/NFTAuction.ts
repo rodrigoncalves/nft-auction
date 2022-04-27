@@ -120,5 +120,8 @@ describe.only('NFTAuction', () => {
 
     // check that the token has already been sold
     await expect(contract.makeABid(1, { value: bid })).to.be.revertedWith('Token has already been sold');
+
+    // check that does not have any earnings to withdraw
+    await expect(contract.connect(contractOwner).withdrawEarnings()).to.be.revertedWith('No earnings to withdraw');
   });
 });
